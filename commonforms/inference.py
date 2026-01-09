@@ -5,7 +5,24 @@ from huggingface_hub import hf_hub_download
 
 from commonforms.utils import BoundingBox, Page, Widget
 from commonforms.form_creator import PyPdfFormCreator
-from commonforms.exceptions import EncryptedPdfError
+from commonforms.exceptions import (
+    EncryptedPdfError,
+    InvalidConfidenceError,
+    InvalidImageSizeError,
+    FileNotFoundError as InputFileNotFoundError,
+)
+from commonforms.config import (
+    DEFAULT_IMAGE_SIZE,
+    DEFAULT_CONFIDENCE_THRESHOLD,
+    DEFAULT_IOU_THRESHOLD,
+    FAST_MODE_IOU_THRESHOLD,
+    ONNX_IMAGE_SIZE,
+    WIDGET_Y_ALIGNMENT_THRESHOLD,
+    BOUNDING_BOX_ROUNDING_PRECISION,
+    CONFIDENCE_MIN,
+    CONFIDENCE_MAX,
+    IMAGE_SIZE_MIN,
+)
 
 import formalpdf
 import pypdfium2
@@ -21,9 +38,35 @@ models = {
 
 
 class FFDNetDetector:
+    """Form field detection using YOLO-based FFDNet models.
+
+    This class provides functionality to detect form fields (TextBox, ChoiceButton,
+    Signature) in PDF page images using pre-trained FFDNet models.
+
+    Attributes:
+        device: The device to run inference on (e.g., "cpu", "cuda", or GPU index).
+        fast: Whether to use ONNX model for faster CPU inference.
+        model: The loaded YOLO model instance.
+        id_to_cls: Mapping from class IDs to widget type names.
+
+    Example:
+        >>> detector = FFDNetDetector("FFDNet-L", device="cpu")
+        >>> pages = render_pdf("input.pdf")
+        >>> widgets = detector.extract_widgets(pages, confidence=0.3)
+    """
+
     def __init__(
         self, model_or_path: str, device: int | str = "cpu", fast: bool = False
     ) -> None:
+        """Initialize the FFDNet detector.
+
+        Args:
+            model_or_path: Model name ("FFDNet-S" or "FFDNet-L") or path to a
+                custom model file (.pt or .onnx).
+            device: Device for inference. Use "cpu", "cuda", or an integer GPU index.
+            fast: If True, use ONNX model for ~50% faster CPU inference with
+                a small accuracy trade-off.
+        """
         self.device = device
         self.fast = fast
 
@@ -51,20 +94,43 @@ class FFDNetDetector:
         return model_path
 
     def extract_widgets(
-        self, pages: list[Page], confidence: float = 0.3, image_size: int = 1600
+        self,
+        pages: list[Page],
+        confidence: float = DEFAULT_CONFIDENCE_THRESHOLD,
+        image_size: int = DEFAULT_IMAGE_SIZE,
     ) -> dict[int, list[Widget]]:
+        """Extract form field widgets from rendered PDF pages.
+
+        Runs the detection model on each page image and returns detected widgets
+        organized by page number, sorted in approximate reading order.
+
+        Args:
+            pages: List of Page objects containing rendered page images.
+            confidence: Minimum confidence threshold for detections (0.0 to 1.0).
+                Lower values detect more widgets but may include false positives.
+            image_size: Image size for model inference. Ignored in fast mode
+                where ONNX models use a fixed size.
+
+        Returns:
+            Dictionary mapping page indices to lists of detected Widget objects.
+            Pages with no detections are omitted from the dictionary.
+        """
         if self.fast:
-            # overrides the image size to 1216, since that's all ONNX supports
+            # ONNX models are compiled with a fixed input size
             results = [
                 self.model.predict(
-                    p.image, iou=1, conf=confidence, augment=False, imgsz=1216
+                    p.image,
+                    iou=FAST_MODE_IOU_THRESHOLD,
+                    conf=confidence,
+                    augment=False,
+                    imgsz=ONNX_IMAGE_SIZE,
                 )
                 for p in pages
             ]
         else:
             results = self.model.predict(
                 [p.image for p in pages],
-                iou=0.1,
+                iou=DEFAULT_IOU_THRESHOLD,
                 conf=confidence,
                 augment=True,
                 imgsz=image_size,
@@ -110,15 +176,13 @@ def sort_widgets(widgets: list[Widget]) -> list[Widget]:
     sorted_widgets = sorted(
         widgets,
         key=lambda w: (
-            round(
-                w.bounding_box.y0, 3
-            ),  # Round to handle minor vertical alignment differences
+            round(w.bounding_box.y0, BOUNDING_BOX_ROUNDING_PRECISION),
             w.bounding_box.x0,
         ),
     )
 
     # Find rows of widgets by grouping those with similar y coordinates
-    y_threshold = 0.01  # Threshold for considering widgets on same line
+    y_threshold = WIDGET_Y_ALIGNMENT_THRESHOLD
     lines = []
     current_line = []
 
@@ -144,6 +208,17 @@ def sort_widgets(widgets: list[Widget]) -> list[Widget]:
 
 
 def render_pdf(pdf_path: str) -> list[Page]:
+    """Render all pages of a PDF document as images.
+
+    Args:
+        pdf_path: Path to the PDF file to render.
+
+    Returns:
+        List of Page objects, each containing a PIL Image and dimensions.
+
+    Raises:
+        pypdfium2.PdfiumError: If the PDF is encrypted or cannot be opened.
+    """
     pages = []
     doc = formalpdf.open(pdf_path)
     try:
@@ -155,6 +230,37 @@ def render_pdf(pdf_path: str) -> list[Page]:
         doc.document.close()
 
 
+def _validate_inputs(
+    input_path: str | Path,
+    confidence: float,
+    image_size: int,
+) -> None:
+    """Validate input parameters for prepare_form.
+
+    Args:
+        input_path: Path to the input PDF file.
+        confidence: Confidence threshold for detection.
+        image_size: Image size for inference.
+
+    Raises:
+        InputFileNotFoundError: If input file does not exist.
+        InvalidConfidenceError: If confidence is outside [0.0, 1.0].
+        InvalidImageSizeError: If image_size is not positive.
+    """
+    # Validate input file exists
+    input_path = Path(input_path)
+    if not input_path.exists():
+        raise InputFileNotFoundError(str(input_path), "PDF file")
+
+    # Validate confidence threshold
+    if not (CONFIDENCE_MIN <= confidence <= CONFIDENCE_MAX):
+        raise InvalidConfidenceError(confidence)
+
+    # Validate image size
+    if image_size < IMAGE_SIZE_MIN:
+        raise InvalidImageSizeError(image_size)
+
+
 def prepare_form(
     input_path: str | Path,
     output_path: str | Path,
@@ -163,11 +269,43 @@ def prepare_form(
     keep_existing_fields: bool = False,
     use_signature_fields: bool = False,
     device: int | str = "cpu",
-    image_size: int = 1600,
-    confidence: float = 0.3,
+    image_size: int = DEFAULT_IMAGE_SIZE,
+    confidence: float = DEFAULT_CONFIDENCE_THRESHOLD,
     fast: bool = False,
     multiline: bool = False,
-):
+) -> None:
+    """Automatically detect and add form fields to a PDF document.
+
+    This is the main entry point for CommonForms. It processes an input PDF,
+    detects form fields using a trained model, and creates a new PDF with
+    the detected fields added as interactive form elements.
+
+    Args:
+        input_path: Path to the input PDF file.
+        output_path: Path where the output PDF with form fields will be saved.
+        model_or_path: Model name ("FFDNet-S" or "FFDNet-L") or path to custom model.
+        keep_existing_fields: If True, preserve existing form fields in the PDF.
+        use_signature_fields: If True, create signature fields for detected
+            signatures; otherwise, create text fields.
+        device: Device for model inference ("cpu", "cuda", or GPU index).
+        image_size: Image size for inference. Higher values may improve accuracy.
+        confidence: Detection confidence threshold (0.0 to 1.0).
+        fast: If True, use ONNX model for faster CPU inference.
+        multiline: If True, create multiline text fields.
+
+    Raises:
+        InputFileNotFoundError: If input PDF file does not exist.
+        InvalidConfidenceError: If confidence is not in range [0.0, 1.0].
+        InvalidImageSizeError: If image_size is not positive.
+        EncryptedPdfError: If the input PDF is encrypted.
+
+    Example:
+        >>> from commonforms import prepare_form
+        >>> prepare_form("input.pdf", "output.pdf", confidence=0.4)
+    """
+    # Validate inputs before processing
+    _validate_inputs(input_path, confidence, image_size)
+
     detector = FFDNetDetector(model_or_path, device=device, fast=fast)
 
     try:
