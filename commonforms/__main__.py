@@ -1,4 +1,5 @@
 from commonforms.inference import prepare_form
+from commonforms.config import DEFAULT_IMAGE_SIZE, DEFAULT_CONFIDENCE_THRESHOLD
 from argparse import ArgumentParser
 from pathlib import Path
 
@@ -35,15 +36,15 @@ def main():
     parser.add_argument(
         "--image-size",
         type=int,
-        default=1600,
+        default=DEFAULT_IMAGE_SIZE,
         dest="image_size",
-        help="Image size for inference (default: 1600)",
+        help=f"Image size for inference (default: {DEFAULT_IMAGE_SIZE})",
     )
     parser.add_argument(
         "--confidence",
         type=float,
-        default=0.3,
-        help="Confidence threshold for detection (default: 0.3)",
+        default=DEFAULT_CONFIDENCE_THRESHOLD,
+        help=f"Confidence threshold for detection (default: {DEFAULT_CONFIDENCE_THRESHOLD})",
     )
     parser.add_argument(
         "--fast",
