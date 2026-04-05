@@ -22,6 +22,7 @@ from commonforms.config import (
     CONFIDENCE_MIN,
     CONFIDENCE_MAX,
     IMAGE_SIZE_MIN,
+    IMAGE_SIZE_MAX,
 )
 
 import formalpdf
@@ -257,7 +258,7 @@ def _validate_inputs(
         raise InvalidConfidenceError(confidence)
 
     # Validate image size
-    if image_size < IMAGE_SIZE_MIN:
+    if not (IMAGE_SIZE_MIN <= image_size <= IMAGE_SIZE_MAX):
         raise InvalidImageSizeError(image_size)
 
 
