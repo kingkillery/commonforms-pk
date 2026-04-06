@@ -194,6 +194,8 @@ class PyPdfFormCreator:
         # NOTE: Commenting out add_form_topname as it causes lazy loading issues with pages
         # self.reader.add_form_topname("original")
         self.writer = PdfWriter(clone_from=self.reader)
+        # Cache the pages list because accessing self.writer.pages is expensive
+        self.pages = self.writer.pages
         # Keep reader open until we're done - pypdf uses lazy loading
 
         zapf_font = DictionaryObject(
@@ -218,8 +220,7 @@ class PyPdfFormCreator:
                     acroform[NameObject("/Fields")] = ArrayObject()
 
         # Also clear widget annotations from each page
-        for i in range(len(self.writer.pages)):
-            page = self.writer.pages[i]
+        for page in self.pages:
             if NameObject("/Annots") in page:
                 page[NameObject("/Annots")] = ArrayObject()
 
@@ -238,7 +239,7 @@ class PyPdfFormCreator:
             bounding_box: Normalized coordinates for field placement.
             multiline: If True, allows multi-line text input.
         """
-        rect = rect_for(bounding_box, self.writer.pages[page])
+        rect = rect_for(bounding_box, self.pages[page])
         textbox = Textbox(name=name, rect=rect, multiline=multiline)
         self.writer.add_annotation(page_number=page, annotation=textbox)
 
@@ -250,7 +251,7 @@ class PyPdfFormCreator:
             page: Zero-indexed page number to add the field to.
             bounding_box: Normalized coordinates for field placement.
         """
-        rect = rect_for(bounding_box, self.writer.pages[page])
+        rect = rect_for(bounding_box, self.pages[page])
         checkbox = Checkbox(name=name, rect=rect)
         self.writer.add_annotation(page_number=page, annotation=checkbox)
 
@@ -262,7 +263,7 @@ class PyPdfFormCreator:
             page: Zero-indexed page number to add the field to.
             bounding_box: Normalized coordinates for field placement.
         """
-        rect = rect_for(bounding_box, self.writer.pages[page])
+        rect = rect_for(bounding_box, self.pages[page])
         signature = Signature(name=name, rect=rect)
         self.writer.add_annotation(page_number=page, annotation=signature)
 
