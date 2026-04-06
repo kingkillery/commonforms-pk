@@ -1,0 +1,3 @@
+## 2026-04-06 - PyPDF Property Access Overhead
+**Learning:** In the `pypdf` library, accessing properties like `writer.pages` or `reader.pages` can trigger expensive O(N) traversals of the PDF page tree for every access. Accessing `.pages[page]` repeatedly inside a loop is essentially an O(N*M) performance bottleneck where N is the number of widgets/annotations to add, and M is the tree size (number of pages).
+**Action:** When repeatedly modifying multiple pages in a `PdfWriter` or iterating through them, always cache the pages property to a list (e.g., `pages = writer.pages`) and reuse the list, to avoid regenerating the expensive page tree properties multiple times.
