@@ -1,0 +1,4 @@
+## 2024-05-24 - Removed hardcoded test password from comments
+**Vulnerability:** A hardcoded password (`kanbanery`) for an encrypted test PDF was stored in a comment in `tests/inference_test.py`.
+**Learning:** Even though this password was just used to open a test resource, it may expose passwords used in other environments, leak the developer's patterns, or normalize adding secrets in comments. Test resources that require secrets should use a standard secrets management flow or a generic dummy password that is clearly marked as such without providing the developer's actual password string.
+**Prevention:** Avoid writing any cleartext passwords in source files, including test comments. Use environment variables, test configuration files, or document that a password is required without specifying its value inline.
