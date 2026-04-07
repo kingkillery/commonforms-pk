@@ -1,0 +1,4 @@
+## 2025-04-07 - Vulnerable Dependency Range
+**Vulnerability:** The `pyproject.toml` configuration allowed `cryptography>=3.1`, which includes versions with known critical vulnerabilities (like CVE-2023-23931 and CVE-2020-25659).
+**Learning:** Overly broad dependency ranges for security-critical packages like `cryptography` can accidentally introduce vulnerabilities if an older, affected version satisfies the constraint. It's safer to have tighter bounds or specifically exclude vulnerable major versions.
+**Prevention:** Establish a process to regularly review and update minimum required versions for dependencies that deal with encryption, authentication, or other sensitive operations. Use a minimum version that is known to be patched against historical CVEs.
