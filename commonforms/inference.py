@@ -117,6 +117,7 @@ class FFDNetDetector:
         """
         if self.fast:
             # ONNX models are compiled with a fixed input size
+            # ⚡ Bolt optimization: pass verbose=False to avoid synchronous stdout blocking overhead
             results = [
                 self.model.predict(
                     p.image,
@@ -124,10 +125,12 @@ class FFDNetDetector:
                     conf=confidence,
                     augment=False,
                     imgsz=ONNX_IMAGE_SIZE,
+                    verbose=False,
                 )
                 for p in pages
             ]
         else:
+            # ⚡ Bolt optimization: pass verbose=False to avoid synchronous stdout blocking overhead
             results = self.model.predict(
                 [p.image for p in pages],
                 iou=DEFAULT_IOU_THRESHOLD,
@@ -135,6 +138,7 @@ class FFDNetDetector:
                 augment=True,
                 imgsz=image_size,
                 device=self.device,
+                verbose=False,
             )
 
         widgets = {}
