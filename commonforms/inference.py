@@ -124,6 +124,8 @@ class FFDNetDetector:
                     conf=confidence,
                     augment=False,
                     imgsz=ONNX_IMAGE_SIZE,
+                    # pass verbose=False to avoid synchronous stdout blocking overhead
+                    verbose=False,
                 )
                 for p in pages
             ]
@@ -135,6 +137,8 @@ class FFDNetDetector:
                 augment=True,
                 imgsz=image_size,
                 device=self.device,
+                # pass verbose=False to avoid synchronous stdout blocking overhead
+                verbose=False,
             )
 
         widgets = {}
