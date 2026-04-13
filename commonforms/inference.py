@@ -124,6 +124,7 @@ class FFDNetDetector:
                     conf=confidence,
                     augment=False,
                     imgsz=ONNX_IMAGE_SIZE,
+                    verbose=False,  # Optimization: prevent stdout blocking during loop
                 )
                 for p in pages
             ]
@@ -135,6 +136,7 @@ class FFDNetDetector:
                 augment=True,
                 imgsz=image_size,
                 device=self.device,
+                verbose=False,  # Optimization: prevent stdout blocking
             )
 
         widgets = {}
