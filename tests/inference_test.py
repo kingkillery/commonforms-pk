@@ -44,7 +44,7 @@ def test_mutlinline(tmp_path):
 
 
 def test_encrypted_failure(tmp_path):
-    # Reminder to future Joe: password for encrypted PDF is "kanbanery"
+    # Reminder to future Joe: password for encrypted PDF is in ENCRYPTED_PDF_PASSWORD environment variable
     output_path = tmp_path / "output.pdf"
 
     with pytest.raises(commonforms.exceptions.EncryptedPdfError):
@@ -54,4 +54,4 @@ def test_encrypted_failure(tmp_path):
 # TODO(joe): future tests around handling encrypted PDFs
 #   1. add a --password flag and test that inference doesn't fail
 #   2. if a password is provided, ensure that the _output_ PDF remains encrpyted 
-#      with the same password 
+#      with the same password (e.g. pulled from ENCRYPTED_PDF_PASSWORD environment variable)
