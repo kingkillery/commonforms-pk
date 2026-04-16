@@ -1,0 +1,3 @@
+## 2024-03-24 - Ultralytics YOLO verbose Output Blocking
+**Learning:** By default, Ultralytics YOLO models log output synchronously to stdout. When calling `predict()` frequently (e.g., in loops or when processing many pages/images), this synchronous I/O can become a significant performance bottleneck, blocking execution while writing to the console.
+**Action:** Always pass `verbose=False` to `model.predict()` in production or high-throughput code unless debugging output is explicitly required.
