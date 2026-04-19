@@ -74,7 +74,7 @@ def main():
     json_dir = coco_dir / 'json'
 
     if not images_dir.exists() or not json_dir.exists():
-        print(f"Error: Directory must contain 'images' and 'json' subdirectories")
+        print("Error: Directory must contain 'images' and 'json' subdirectories")
         return 1
 
     # Read CSV files
