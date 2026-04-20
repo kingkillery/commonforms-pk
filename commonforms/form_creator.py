@@ -218,8 +218,9 @@ class PyPdfFormCreator:
                     acroform[NameObject("/Fields")] = ArrayObject()
 
         # Also clear widget annotations from each page
-        for i in range(len(self.writer.pages)):
-            page = self.writer.pages[i]
+        # Note: Directly iterate over writer.pages instead of using index access
+        # (e.g. writer.pages[i]) to avoid O(N^2) complexity from pypdf's lazy loading.
+        for page in self.writer.pages:
             if NameObject("/Annots") in page:
                 page[NameObject("/Annots")] = ArrayObject()
 
