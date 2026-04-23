@@ -66,5 +66,5 @@ class InvalidImageSizeError(InvalidInputError):
 
     def __init__(self, image_size: int):
         self.image_size = image_size
-        self.message = f"Image size must be a positive integer, got: {image_size}"
+        self.message = f"Image size must be between 32 and 4096, got: {image_size}"
         super().__init__(self.message)
