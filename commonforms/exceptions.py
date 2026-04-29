@@ -5,6 +5,8 @@ This module provides specific exception types for different error scenarios,
 enabling better error handling and more informative error messages.
 """
 
+from commonforms.config import IMAGE_SIZE_MIN, IMAGE_SIZE_MAX
+
 
 class CommonFormsError(Exception):
     """Base exception for all CommonForms errors."""
@@ -62,9 +64,9 @@ class InvalidConfidenceError(InvalidInputError):
 
 
 class InvalidImageSizeError(InvalidInputError):
-    """Raised when image size is invalid (non-positive)."""
+    """Raised when image size is invalid (outside allowed range)."""
 
     def __init__(self, image_size: int):
         self.image_size = image_size
-        self.message = f"Image size must be a positive integer, got: {image_size}"
+        self.message = f"Image size must be between {IMAGE_SIZE_MIN} and {IMAGE_SIZE_MAX}, got: {image_size}"
         super().__init__(self.message)

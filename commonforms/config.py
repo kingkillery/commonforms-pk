@@ -65,3 +65,4 @@ CONFIDENCE_MAX: float = 1.0
 
 # Minimum valid image size
 IMAGE_SIZE_MIN: int = 32
+IMAGE_SIZE_MAX: int = 4096
