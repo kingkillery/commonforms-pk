@@ -128,6 +128,10 @@ class FFDNetDetector:
                 for p in pages
             ]
         else:
+            # ⚡ Bolt Optimization: Added stream=True to prevent massive memory
+            # spikes for large PDFs while still allowing batched inference.
+            # This yields results one-by-one as a generator instead of holding
+            # all output tensors in memory simultaneously.
             results = self.model.predict(
                 [p.image for p in pages],
                 iou=DEFAULT_IOU_THRESHOLD,
@@ -135,6 +139,7 @@ class FFDNetDetector:
                 augment=True,
                 imgsz=image_size,
                 device=self.device,
+                stream=True,
             )
 
         widgets = {}
